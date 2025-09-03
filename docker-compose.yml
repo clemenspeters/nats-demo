@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+    restart: unless-stopped
+
+  publisher:
+    build: ./publisher
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
+
+  subscriber:
+    build: ./subscriber
+    depends_on:
+      - nats
+    environment:
+      - NATS_URL=nats://nats:4222
