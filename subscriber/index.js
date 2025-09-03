@@ -3,7 +3,9 @@ const sc = StringCodec();
 const NATS_URL = process.env.NATS_URL || 'nats://localhost:4222';
 const PROCESS_MS = parseInt(process.env.PROCESS_MS || '5000', 10);
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 (async () => {
   const nc = await connect({ servers: NATS_URL });
@@ -28,15 +30,25 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
       for await (const m of sub) {
         try {
           const data = sc.decode(m.data);
-          console.log(new Date().toISOString(), '| got message:', data);
+          const meta = m.info;
+          const pubNs = meta && meta.timestampNanos ? meta.timestampNanos : 0;
+          const pubMs = pubNs ? pubNs / 1_000_000 : 0;
+          console.log(
+            'got message:',
+            data,
+            '| published_at:',
+            pubMs ? new Date(pubMs).toISOString() : 'unknown'
+          );
           await sleep(PROCESS_MS);
           m.ack();
-          console.log(new Date().toISOString(), '| acked message:', data);
+          console.log('acked message:', data);
         } catch (err) {
           console.error('Process error:', err.message || err);
         } finally {
           // request next one
-          try { sub.pull({ batch: 1, expires: 5000 }); } catch (_) {}
+          try {
+            sub.pull({ batch: 1, expires: 5000 });
+          } catch (_) {}
         }
       }
     } catch (err) {

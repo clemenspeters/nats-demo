@@ -9,12 +9,31 @@ const NATS_URL = process.env.NATS_URL || 'nats://localhost:4222';
   // Enable JetStream
   const jsm = await nc.jetstreamManager().catch(() => null);
   if (jsm) {
+    const desired = {
+      name: 'GREET',
+      subjects: ['greet'],
+      retention: 'workqueue',
+      storage: 'file',
+      discard: 'old',
+    };
+    let recreate = false;
     try {
-      await jsm.streams.info('GREET');
-    } catch (err) {
-      // create stream if missing
-      await jsm.streams.add({ name: 'GREET', subjects: ['greet', 'greet.*'] });
-      console.log('Created JetStream stream GREET');
+      const info = await jsm.streams.info('GREET');
+      const currentRetention = info.config.retention; // expected 'limits' currently
+      if (currentRetention !== 'workqueue') {
+        console.log('Existing stream retention is', currentRetention, '-> will recreate as workqueue (destructive)');
+        recreate = true;
+      }
+    } catch (_) {
+      // missing stream
+      recreate = true;
+    }
+    if (recreate) {
+      try { await jsm.streams.delete('GREET'); } catch (_) {}
+      await jsm.streams.add(desired);
+      console.log('Created JetStream stream GREET with workqueue retention');
+    } else {
+      console.log('Stream GREET already has workqueue retention');
     }
   }
 
