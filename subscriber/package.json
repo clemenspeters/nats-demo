@@ -1,0 +1,9 @@
+{
+  "name": "nats-subscriber",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "nats": "^2.9.2"
+  }
+}
